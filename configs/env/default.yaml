@@ -1,0 +1,12 @@
+# _target_ used by env factory to instantiate ContentMarketEnv
+n_users: 50
+n_populations: 5
+n_creators: 20
+content_dim: 16
+n_rounds: 200
+slate_size: 5
+quality_cost_scale: 0.5
+fatigue_gamma: 0.95
+alpha_quality: 0.3   # quality bonus in click logit
+gamma_bait: 0.5      # short-term bait attraction in click logit
+beta_bait: 0.5       # fatigue-weighted bait penalty (net bait effect = 0 when fatigue=gamma/beta=1)

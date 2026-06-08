@@ -1,0 +1,11 @@
+defaults:
+  - env: default
+  - mechanism: m1_single
+  - agent: ippo
+  - experiment: null
+  - _self_
+
+seed: 42
+wandb:
+  project: recsim-arena
+  mode: online   # set to "disabled" for local smoke tests

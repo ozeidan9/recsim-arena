@@ -1,0 +1,7 @@
+# H1: Engagement collapse on single-stage mechanism
+# Run IPPO on M1 and measure diversity/quality over training episodes
+defaults:
+  - override /mechanism: m1_single
+
+n_episodes: 500
+eval_every: 10

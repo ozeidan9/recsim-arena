@@ -1,0 +1,4 @@
+_target_: recsys_market.mechanisms.m1_single.SingleStageMechanism
+temperature: 1.0
+bait_weight: 0.5   # M1 promotes bait (conflates engagement with relevance)
+deterministic: true

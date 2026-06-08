@@ -1,0 +1,13 @@
+# Placeholder for Phase 2 IPPO implementation
+_target_: recsys_market.agents.ippo.IPPOTrainer
+lr: 3.0e-4
+gamma: 0.99
+gae_lambda: 0.95
+clip_coef: 0.2
+ent_coef: 0.01
+vf_coef: 0.5
+max_grad_norm: 0.5
+n_steps: 200       # rollout length (= n_rounds per episode)
+n_epochs: 4
+batch_size: 64
+hidden_dim: 64
