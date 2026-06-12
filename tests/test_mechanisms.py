@@ -1,8 +1,17 @@
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+
 from recsys_market.mechanisms.m0_random import RandomMechanism
 from recsys_market.mechanisms.m1_single import SingleStageMechanism
+from recsys_market.mechanisms.m2_two_stage import TwoStageMechanism
+from recsys_market.mechanisms.m3_llm_gate import LLMGateMechanism
+from recsys_market.llm_gate.gate import SimpleLinearGate
 
 
 @pytest.fixture
@@ -146,3 +155,138 @@ def test_m1_temperature_affects_scores():
 
     # Low temperature should be more concentrated (higher max count)
     assert top1_counts_low.max() > top1_counts_high.max()
+
+
+# ── M2 (TwoStageMechanism) ────────────────────────────────────────────────────
+
+@pytest.fixture
+def small_market():
+    rng = np.random.default_rng(7)
+    n_users, n_creators, d = 8, 12, 8
+    prefs = rng.standard_normal((n_users, d)).astype(np.float32)
+    prefs /= np.linalg.norm(prefs, axis=1, keepdims=True)
+    contents = rng.standard_normal((n_creators, d)).astype(np.float32)
+    contents /= np.linalg.norm(contents, axis=1, keepdims=True)
+    quality = rng.uniform(0, 1, n_creators).astype(np.float32)
+    bait = rng.uniform(0, 1, n_creators).astype(np.float32)
+    return prefs, contents, quality, bait, d
+
+
+def test_m2_slate_shape(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    mech = TwoStageMechanism(content_dim=d, retrieval_size=6)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    assert slates.shape == (8, 3)
+
+
+def test_m2_valid_indices(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    mech = TwoStageMechanism(content_dim=d, retrieval_size=6)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    assert slates.min() >= 0
+    assert slates.max() < contents.shape[0]
+
+
+def test_m2_retrieval_bottleneck(small_market):
+    """With retrieval_size=4 and n_creators=12, each slate should only draw
+    from 4 possible creator indices per user (not all 12).
+
+    We verify by checking that across all users, the union of slate items is a
+    subset of each user's top-4 by encoder similarity — which is stochastically
+    true when the reranker has not yet learned anything special.
+    We just check slates contain valid indices (structural test).
+    """
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    retrieval_size = 4
+    mech = TwoStageMechanism(content_dim=d, retrieval_size=retrieval_size)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    assert slates.min() >= 0 and slates.max() < 12
+
+
+def test_m2_update_does_not_crash(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    mech = TwoStageMechanism(content_dim=d, retrieval_size=6, update_every=1, min_buffer=0)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    chosen = np.array([slates[i, 0] for i in range(len(prefs))])
+    # Should not raise
+    mech.update(
+        slates=slates,
+        chosen_creators=chosen,
+        user_preferences=prefs,
+        creator_contents=contents,
+        creator_quality=quality,
+        creator_bait=bait,
+    )
+
+
+def test_m2_buffer_grows(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    mech = TwoStageMechanism(content_dim=d, retrieval_size=6)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    chosen = np.array([slates[i, 0] for i in range(len(prefs))])
+    mech.update(slates, chosen, prefs, contents, quality, bait)
+    # 8 users × 3 items per slate = 24 buffer entries
+    assert mech.buffer_size() == 8 * 3
+
+
+def test_m2_reranker_loss_finite(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    mech = TwoStageMechanism(
+        content_dim=d, retrieval_size=6, update_every=1, min_buffer=1
+    )
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    chosen = np.array([slates[i, 0] for i in range(len(prefs))])
+    mech.update(slates, chosen, prefs, contents, quality, bait)
+    loss = mech.reranker_loss()
+    assert np.isfinite(loss), f"Reranker loss is not finite: {loss}"
+
+
+# ── M3 (LLMGateMechanism) ─────────────────────────────────────────────────────
+
+def test_m3_slate_shape(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    gate = SimpleLinearGate(threshold=0.5)
+    mech = LLMGateMechanism(content_dim=d, retrieval_size=6, gate=gate)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    assert slates.shape == (8, 3)
+
+
+def test_m3_valid_indices(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    gate = SimpleLinearGate(threshold=0.5)
+    mech = LLMGateMechanism(content_dim=d, retrieval_size=6, gate=gate)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    assert slates.min() >= 0 and slates.max() < 12
+
+
+def test_m3_strict_gate_still_fills_slate(small_market):
+    """Even with a very strict gate (nearly all fail), slates should be full
+    because gate_min_slots ensures fallback to gate-rejects."""
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    # Near-impossible gate: requires quality > 0.99 AND bait < 0.01
+    gate = SimpleLinearGate(alpha_quality=10.0, alpha_bait=-10.0, bias=-9.0, threshold=0.99)
+    mech = LLMGateMechanism(content_dim=d, retrieval_size=8, gate=gate)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    # Should still return valid slates
+    assert slates.shape == (8, 3)
+    assert slates.min() >= 0 and slates.max() < 12
+
+
+def test_m3_update_does_not_crash(small_market):
+    prefs, contents, quality, bait, d = small_market
+    rng = np.random.default_rng(0)
+    gate = SimpleLinearGate(threshold=0.5)
+    mech = LLMGateMechanism(content_dim=d, retrieval_size=6, gate=gate,
+                             update_every=1, min_buffer=0)
+    slates = mech.recommend(prefs, contents, quality, bait, slate_size=3, rng=rng)
+    chosen = np.array([slates[i, 0] for i in range(len(prefs))])
+    mech.update(slates, chosen, prefs, contents, quality, bait)

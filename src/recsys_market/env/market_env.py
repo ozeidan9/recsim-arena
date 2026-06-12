@@ -158,7 +158,20 @@ class ContentMarketEnv(ParallelEnv):
         )
 
         # Click probabilities via logit choice model
-        clicks, bait_consumed = self._compute_clicks(slates, contents, quality, bait)
+        clicks, bait_consumed, chosen_creators = self._compute_clicks(
+            slates, contents, quality, bait
+        )
+
+        # Notify stateful mechanisms (e.g. M2/M3) of click feedback
+        if hasattr(self._mechanism, "update"):
+            self._mechanism.update(
+                slates=slates,
+                chosen_creators=chosen_creators,
+                user_preferences=self._user_pool.preferences,
+                creator_contents=contents,
+                creator_quality=quality,
+                creator_bait=bait,
+            )
 
         # Creator rewards
         exposure_counts = clicks  # (M,) total clicks received
@@ -254,7 +267,7 @@ class ContentMarketEnv(ParallelEnv):
         # Bait consumed per user = bait level of chosen creator
         bait_consumed = slate_bait[np.arange(n_users), chosen]  # (N,)
 
-        return clicks, bait_consumed
+        return clicks, bait_consumed, chosen_creators
 
     def _compute_observations(self) -> dict[str, np.ndarray]:
         """Build per-creator observation vectors."""
