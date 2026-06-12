@@ -156,6 +156,18 @@ def main() -> None:
         with open(results_dir / "grd_log.json", "w") as f:
             json.dump(grd_log, f, indent=2)
 
+    from run_meta import ENV_CONFIG, IPPO_CONFIG, save_run_config
+    save_run_config(results_dir, {
+        "experiment": "h1",
+        "mechanism": "m1",
+        "mechanism_params": {"temperature": 1.0, "bait_weight": 0.5},
+        "seed": args.seed,
+        "n_episodes": args.n_episodes,
+        "eval_every": args.eval_every,
+        "env": ENV_CONFIG,
+        "ippo": IPPO_CONFIG,
+    })
+
     print(f"\nResults saved to {results_dir}/")
 
     # ── Quick summary ─────────────────────────────────────────────────────────

@@ -1,0 +1,22 @@
+[
+  {
+    "temperature": 0.1,
+    "final_diversity_entropy": 1.9433779257532877
+  },
+  {
+    "temperature": 0.3,
+    "final_diversity_entropy": 1.8444397270569681
+  },
+  {
+    "temperature": 1.0,
+    "final_diversity_entropy": 1.9865302366210549
+  },
+  {
+    "temperature": 3.0,
+    "final_diversity_entropy": 1.9730014063936128
+  },
+  {
+    "temperature": 10.0,
+    "final_diversity_entropy": 1.9991638135818404
+  }
+]

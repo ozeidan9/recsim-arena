@@ -148,6 +148,18 @@ def main() -> None:
     with open(results_dir / "ippo_log.json", "w") as f:
         json.dump(m2_log, f, indent=2)
 
+    from run_meta import ENV_CONFIG, IPPO_CONFIG, save_run_config
+    save_run_config(results_dir, {
+        "experiment": "h4",
+        "mechanism": "m2",
+        "mechanism_params": {"retrieval_size": args.retrieval_size},
+        "seed": args.seed,
+        "n_episodes": args.n_episodes,
+        "eval_every": args.eval_every,
+        "env": ENV_CONFIG,
+        "ippo": IPPO_CONFIG,
+    })
+
     print(f"\nResults saved to {results_dir}/")
 
     # ── Summary ───────────────────────────────────────────────────────────────

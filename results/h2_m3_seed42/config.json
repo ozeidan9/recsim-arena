@@ -1,0 +1,45 @@
+{
+  "experiment": "h2",
+  "mechanism": "m3",
+  "mechanism_params": {
+    "retrieval_size": 10,
+    "gate": "SimpleLinearGate",
+    "gate_alpha_quality": 3.0,
+    "gate_alpha_bait": -3.0,
+    "gate_threshold": 0.5
+  },
+  "seed": 42,
+  "n_episodes": 300,
+  "eval_every": 10,
+  "env": {
+    "n_users": 50,
+    "n_populations": 5,
+    "n_creators": 20,
+    "content_dim": 16,
+    "n_rounds": 200,
+    "slate_size": 5,
+    "quality_cost_scale": 0.5,
+    "fatigue_gamma": 0.95,
+    "alpha_quality": 0.3,
+    "gamma_bait": 0.5,
+    "beta_bait": 0.5
+  },
+  "ippo": {
+    "lr": 0.0003,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip_coef": 0.2,
+    "ent_coef": 0.01,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "n_epochs": 4,
+    "batch_size": 64,
+    "hidden_dim": 64
+  },
+  "backfilled": true,
+  "_provenance": {
+    "git_commit": "4e7ed39911977d2713b487871a70dd24d4166fde",
+    "saved_at": "2026-06-12T23:06:38.159860+00:00",
+    "python_version": "3.14.5"
+  }
+}

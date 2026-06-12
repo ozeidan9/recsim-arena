@@ -160,6 +160,30 @@ def main() -> None:
     with open(results_dir / "ippo_log.json", "w") as f:
         json.dump(target_log, f, indent=2)
 
+    from run_meta import ENV_CONFIG, IPPO_CONFIG, save_run_config
+    if args.mechanism == "m3":
+        mech_params = {
+            "retrieval_size": 10,
+            "gate": "SimpleLinearGate",
+            "gate_alpha_quality": args.gate_alpha_quality,
+            "gate_alpha_bait": args.gate_alpha_bait,
+            "gate_threshold": 0.5,
+        }
+    elif args.mechanism == "m2":
+        mech_params = {"retrieval_size": 10}
+    else:
+        mech_params = {"temperature": 1.0, "bait_weight": 0.5}
+    save_run_config(results_dir, {
+        "experiment": "h2",
+        "mechanism": args.mechanism,
+        "mechanism_params": mech_params,
+        "seed": args.seed,
+        "n_episodes": args.n_episodes,
+        "eval_every": args.eval_every,
+        "env": ENV_CONFIG,
+        "ippo": IPPO_CONFIG,
+    })
+
     print(f"\nResults saved to {results_dir}/")
 
     # ── Summary ───────────────────────────────────────────────────────────────
